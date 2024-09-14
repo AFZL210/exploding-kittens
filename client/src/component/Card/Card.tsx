@@ -1,6 +1,6 @@
 import React from "react";
 import "./Card.css";
-import { CardProps } from "../../types/types";
+import { CardI } from "../../types/types";
 
 const imageTypePathMap: Record<string, string> = {
     Cat: '/kitten-logo.svg',
@@ -9,7 +9,7 @@ const imageTypePathMap: Record<string, string> = {
     Shuffle: '/shuffle-icon.png'
 }
 
-const Card: React.FC<CardProps> = (props) => {
+const Card: React.FC<CardI> = (props) => {
     return (
     <div className="card">
         {props.isFlipped ?

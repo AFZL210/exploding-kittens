@@ -14,10 +14,10 @@ const GamePlayer: React.FC = () => {
       </div>
 
       <div className="cards-container">
-        <Card cardType={CardTypes.Cat} isFlipped={true} />
-        <Card cardType={CardTypes.Bomb} isFlipped={true} />
-        <Card cardType={CardTypes.Defuse} isFlipped={true} />
-        <Card cardType={CardTypes.Shuffle} isFlipped={true} />
+        <Card cardType={CardTypes.Cat} isFlipped={true} index={0}/>
+        <Card cardType={CardTypes.Bomb} isFlipped={true} index={0}/>
+        <Card cardType={CardTypes.Defuse} isFlipped={true} index={0}/>
+        <Card cardType={CardTypes.Shuffle} isFlipped={true} index={0}/>
       </div>
     </div>
   );

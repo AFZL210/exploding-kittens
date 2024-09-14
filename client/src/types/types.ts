@@ -5,7 +5,8 @@ export enum CardTypes {
   Shuffle = "Shuffle",
 }
 
-export interface CardProps {
+export interface CardI {
+  index: number;
   isFlipped: boolean;
   cardType: CardTypes;
 }
