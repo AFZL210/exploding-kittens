@@ -10,3 +10,8 @@ export interface CardI {
   isFlipped: boolean;
   cardType: CardTypes;
 }
+
+export interface UserI {
+  isLoggedIn: boolean;
+  username: string;
+}
