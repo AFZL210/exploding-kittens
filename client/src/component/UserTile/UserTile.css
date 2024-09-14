@@ -1,0 +1,24 @@
+.user-tile {
+    width: 50vw;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-tile .rank-heading {
+    margin-top: 12px;
+    margin-bottom: 20px;
+}
+
+.user-tile .tile {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.user-rank h4 {
+    font-weight: 200;
+}
