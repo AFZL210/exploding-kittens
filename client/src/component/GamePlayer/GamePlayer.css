@@ -1,0 +1,21 @@
+.game-player {
+    padding: 20px 40px;
+}
+
+.draw-count-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+.cards-container {
+    width: 100%;
+    height: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-top: 60px;
+}

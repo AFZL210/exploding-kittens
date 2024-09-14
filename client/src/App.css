@@ -10,5 +10,5 @@
 .app-container .pages {
   height: calc(100vh - 64px);
   width: 100%;
-  background-color: yellow;
+  background-color: transparent;
 }

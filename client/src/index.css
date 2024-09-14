@@ -1,7 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap');
+
 *,
 ::before,
 ::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  color: white;
+  font-family: 'Source Code Pro', monospace;
+  overflow-x: hidden;
+}
+
+body {
+  background-color: #1e1e1e;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(217, 166, 217);
 }
