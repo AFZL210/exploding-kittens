@@ -17,7 +17,6 @@ const GamePlayer: React.FC = () => {
       </div>
 
       <div className="cards-container">
-        <button>click</button>
         <Card cardType={CardTypes.Cat} isFlipped={true} index={0} />
         <Card cardType={CardTypes.Bomb} isFlipped={true} index={0} />
         <Card cardType={CardTypes.Defuse} isFlipped={true} index={0} />
