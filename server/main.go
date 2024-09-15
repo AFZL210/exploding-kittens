@@ -11,6 +11,7 @@ import (
 	"sort"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,12 +21,17 @@ type User struct {
 	Password string `json:"password"`
 }
 
+type Card struct {
+	CardType  string `json:"cardType"`
+	IsFlipped bool   `json:"isFlipped"`
+}
+
 type GameState struct {
-	Cards          []string `json:"cards"`
-	DefuseCards    int      `json:"defuseCards"`
-	RemainingCards int      `json:"remainingCards"`
-	GameOver       bool     `json:"gameOver"`
-	Won            bool     `json:"won"`
+	Cards          []Card `json:"cards"`
+	DefuseCards    int    `json:"defuseCards"`
+	RemainingCards int    `json:"remainingCards"`
+	GameOver       bool   `json:"gameOver"`
+	IsWon          bool   `json:"isWon"`
 }
 
 type LeaderboardEntry struct {
@@ -49,12 +55,16 @@ func main() {
 	router.HandleFunc("/api/shuffle", shuffleHandler).Methods("GET")
 	router.HandleFunc("/api/play", playHandler).Methods("POST")
 
+	corsAllowedOrigins := handlers.AllowedOrigins([]string{"*"})
+	corsAllowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
+	corsAllowedHeaders := handlers.AllowedHeaders([]string{"Content-Type", "Authorization"})
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(corsAllowedOrigins, corsAllowedMethods, corsAllowedHeaders)(router)))
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -145,52 +155,81 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(gameState.Cards) == 0 {
-		http.Error(w, "No cards left to draw", http.StatusBadRequest)
+	if requestBody.Index < 0 || requestBody.Index >= len(gameState.Cards) {
+		http.Error(w, "Invalid card index", http.StatusBadRequest)
 		return
 	}
 
+	if gameState.Cards[requestBody.Index].IsFlipped {
+		http.Error(w, "Card is already flipped", http.StatusBadRequest)
+		return
+	}
+
+	gameState.Cards[requestBody.Index].IsFlipped = true
 	drawnCard := gameState.Cards[requestBody.Index]
 
-	switch drawnCard {
+	response := struct {
+		Cards          []Card `json:"cards"`
+		IsWon          bool   `json:"isWon"`
+		IsLost         bool   `json:"isLost"`
+		DefuseCount    int    `json:"defuseCount"`
+		RemainingCards int    `json:"remainingCards"`
+	}{
+		Cards:          gameState.Cards,
+		IsWon:          false,
+		IsLost:         false,
+		DefuseCount:    gameState.DefuseCards,
+		RemainingCards: gameState.RemainingCards,
+	}
+
+	switch drawnCard.CardType {
+	case "cat":
+		gameState.RemainingCards--
+	case "defuse":
+		gameState.DefuseCards++
 	case "exploding_kitten":
 		if gameState.DefuseCards > 0 {
 			gameState.DefuseCards--
 		} else {
-			gameState.GameOver = true
-			gameState.Won = false
+			response.IsLost = true
 			resetGame(username)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Game over! You lost."})
-			return
 		}
-	case "defuse":
-		gameState.DefuseCards++
-		gameState.RemainingCards--
 	case "shuffle":
-		if len(gameState.Cards) == 1 {
-			gameState.GameOver = true
-			gameState.Won = true
-			incrementScore(username)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Congratulations! You won the game by drawing the last shuffle card."})
-			return
+		allFlipped := true
+		for _, card := range gameState.Cards {
+			if !card.IsFlipped {
+				allFlipped = false
+				break
+			}
 		}
-	case "cat":
+		if allFlipped {
+			response.IsWon = true
+			incrementScore(username)
+		} else {
+			response.IsLost = true
+			resetGame(username)
+		}
+	}
+
+	if !response.IsWon && !response.IsLost {
 		gameState.RemainingCards--
+		if gameState.RemainingCards == 0 {
+			response.IsWon = true
+			resetGame(username)
+			incrementScore(username)
+		}
 	}
 
-	if len(gameState.Cards) == 1 && gameState.Cards[0] == "shuffle" {
-		gameState.GameOver = true
-		gameState.Won = true
-		incrementScore(username)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Congratulations! You won the game by drawing the last shuffle card."})
-		return
-	}
+	response.DefuseCount = gameState.DefuseCards
+	response.RemainingCards = gameState.RemainingCards
 
-	updatedGameStateJSON, _ := json.Marshal(gameState)
-	redisClient.Set(r.Context(), "gamestate:"+username, string(updatedGameStateJSON), 0)
+	if !response.IsWon && !response.IsLost {
+		updatedGameStateJSON, _ := json.Marshal(gameState)
+		redisClient.Set(r.Context(), "gamestate:"+username, string(updatedGameStateJSON), 0)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(updatedGameStateJSON)
+	json.NewEncoder(w).Encode(response)
 }
 
 func resetGame(username string) {
@@ -200,21 +239,25 @@ func resetGame(username string) {
 }
 
 func createNewGameState() GameState {
-	cards := []string{"cat", "defuse", "shuffle", "exploding_kitten", "cat"}
-	shuffleSlice(cards)
+	cardTypes := []string{"cat", "defuse", "shuffle", "exploding_kitten", "cat"}
+	cards := make([]Card, len(cardTypes))
+	for i, cardType := range cardTypes {
+		cards[i] = Card{CardType: cardType, IsFlipped: false}
+	}
+	shuffleCards(cards)
 	return GameState{
 		Cards:          cards,
 		DefuseCards:    0,
 		RemainingCards: len(cards),
 		GameOver:       false,
-		Won:            false,
+		IsWon:          false,
 	}
 }
 
-func shuffleSlice(slice []string) {
-	for i := len(slice) - 1; i > 0; i-- {
+func shuffleCards(cards []Card) {
+	for i := len(cards) - 1; i > 0; i-- {
 		j, _ := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
-		slice[i], slice[j.Int64()] = slice[j.Int64()], slice[i]
+		cards[i], cards[j.Int64()] = cards[j.Int64()], cards[i]
 	}
 }
 
