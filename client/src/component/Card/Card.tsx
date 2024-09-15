@@ -7,22 +7,25 @@ const imageTypePathMap: Record<string, string> = {
     Bomb: '/bomb-icon.svg',
     Defuse: '/defuse-icon.svg',
     Shuffle: '/shuffle-icon.png'
-}
+};
 
 const Card: React.FC<CardI> = (props) => {
     return (
-    <div className="card">
-        {props.isFlipped ?
-        <div className="flipped-side">
-            <img src={imageTypePathMap[props.cardType]} alt="" />
-            <h1>{props.cardType}</h1>
-        </div>: 
-        <div className="hidden-card">
-            <h1>?</h1>
+        <div
+            className={`card ${props.isFlipped ? "flipped" : ""}`}
+            style={{ pointerEvents: props.isFlipped ? "none" : "auto" }}
+        >
+            {props.isFlipped ?
+                <div className="flipped-side">
+                    <img src={imageTypePathMap[props.cardType]} alt="" />
+                    <h1>{props.cardType}</h1>
+                </div> :
+                <div className="hidden-card">
+                    <h1>?</h1>
+                </div>
+            }
         </div>
-        }
-    </div>
-  );
+    );
 };
 
 export default Card;

@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./GamePlayer.css";
 import Card from "../Card/Card";
 import useAuth from "../../hooks/useAuth";
@@ -13,27 +13,41 @@ const GamePlayer: React.FC = () => {
   const dispatch = useDispatch();
   const gameState = useSelector((state: RootState) => state.game);
 
+  const [isDisabled, setIsDisabled] = useState(false);
+  const [fadeClass, setFadeClass] = useState("");
+
   const getGameStateDataAsync = () => {
     // @ts-ignore
     dispatch(fetchGameState(user.username));
   };
 
   const openCardAsync = (index: number) => {
+    if (isDisabled) return;
+
+    setIsDisabled(true);
+    const cardType = gameState.cards[index].cardType;
+
     // @ts-ignore
     dispatch(openCard({ index: index, username: user.username }));
     if (
       [CardTypes.Shuffle, CardTypes.Bomb].includes(
-        gameState.cards[index].cardType
+        cardType
       )
     ) {
-      toast('Resetting cards...');
+      toast(`It's a ${gameState.cards[index].cardType} Card. You lost!`);
+      setFadeClass("fade-out");
+
       new Promise((res, _rej) => {
         setTimeout(() => {
           res(null);
-        }, 5000)
+        }, 5000);
       }).then(() => {
+        setFadeClass("");
+        setIsDisabled(false);
         getGameStateDataAsync();
-      })
+      });
+    } else {
+      setIsDisabled(false);
     }
   };
 
@@ -46,7 +60,7 @@ const GamePlayer: React.FC = () => {
   }, [gameState]);
 
   return (
-    <div className="game-player">
+    <div className={`game-player ${fadeClass}`}>
       <div className="draw-count-container">
         <h4>{user.username}:</h4>
         <h4>Cards Drawn: {5 - gameState.remainingCards}/5</h4>
@@ -55,7 +69,13 @@ const GamePlayer: React.FC = () => {
       <div className="cards-container">
         {gameState.cards.map((card, idx: number) => {
           return (
-            <div onClick={() => openCardAsync(idx)} key={idx}>
+            <div
+              onClick={() =>
+                !gameState.cards[idx].isFlipped && openCardAsync(idx)
+              }
+              key={idx}
+              style={{ pointerEvents: isDisabled ? "none" : "auto" }}
+            >
               <Card
                 cardType={card.cardType}
                 index={idx}
