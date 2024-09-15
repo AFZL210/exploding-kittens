@@ -6,16 +6,17 @@ const useAuth = () => {
   const user = useSelector((state: RootState) => state.user);
   const dispatch = useDispatch<AppDispatch>();
   const isLoggedIn = user.isLoggedIn;
+  const loading = user.loading;
 
   const logout = () => {
     dispatch(logoutUser());
   };
 
   const login = (username: string) => {
-    dispatch(loginUser({ isLoggedIn: true, username: username }));
+    dispatch(loginUser({ isLoggedIn: true, username: username, loading: true }));
   };
 
-  return { isLoggedIn, login, logout };
+  return { isLoggedIn, login, logout,  loading};
 };
 
 export default useAuth;

@@ -14,4 +14,5 @@ export interface CardI {
 export interface UserI {
   isLoggedIn: boolean;
   username: string;
+  loading: boolean;
 }

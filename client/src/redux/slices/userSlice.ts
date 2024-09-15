@@ -4,6 +4,7 @@ import { UserI } from "../../types/types";
 const initialUserState: UserI = {
   isLoggedIn: false,
   username: "",
+  loading: false
 };
 
 const userSlice = createSlice({
@@ -13,6 +14,7 @@ const userSlice = createSlice({
     loginUser: (state, action: PayloadAction<UserI>) => {
       state.isLoggedIn = true;
       state.username = action.payload.username;
+      state.loading = false;
     },
     logoutUser: (state) => {
       state = initialUserState;

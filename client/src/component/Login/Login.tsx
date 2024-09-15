@@ -1,13 +1,17 @@
 import React, { FormEvent, useState } from "react";
 import "./Login.css";
+import toast from "react-hot-toast";
+import useAuth from "../../hooks/useAuth";
 
 const Login: React.FC = () => {
   const [showLoginTab, setShowLoginTab] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const { loading } = useAuth();
 
   const loginUser = async (e: FormEvent) => {
     e.preventDefault();
+    toast("hello");
   };
 
   const registerUser = async (e: FormEvent) => {
@@ -31,7 +35,7 @@ const Login: React.FC = () => {
           <div className="input-control">
             <input type="password" placeholder="password" />
           </div>
-          <button type="submit" className="submit-btn">
+          <button type="submit" className="submit-btn" disabled={loading}>
             Login
           </button>
           <p>
@@ -50,7 +54,7 @@ const Login: React.FC = () => {
           <div className="input-control">
             <input type="password" placeholder="password" />
           </div>
-          <button type="submit" className="submit-btn">
+          <button type="submit" className="submit-btn" disabled={loading}>
             Register
           </button>
           <p>
