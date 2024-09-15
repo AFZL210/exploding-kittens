@@ -12,38 +12,38 @@ const Login: React.FC = () => {
   const { loading, login } = useAuth();
 
   const resetUserData = () => {
-    setUsername('');
-    setPassword('');
-  }
+    setUsername("");
+    setPassword("");
+  };
 
   const validateUserData = () => {
-    if (username === '') {
-      setErrorMessage('Username cannot be empty.');
+    if (username === "") {
+      setErrorMessage("Username cannot be empty.");
       return false;
-    }
-    else if (password === '') {
-      setErrorMessage('Password cannot be empty.');
+    } else if (password === "") {
+      setErrorMessage("Password cannot be empty.");
       return false;
     }
 
     return true;
-  }
+  };
 
   const loginUser = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateUserData()) return;
     setErrorMessage(null);
 
-    apiClient.post('/login', { username, password })
+    apiClient
+      .post("/login", { username, password })
       .then(() => {
         toast("Logged in!");
         login(username);
-        localStorage.setItem('username', username);
+        localStorage.setItem("username", username);
         resetUserData();
       })
       .catch(() => {
         toast("Wrong password or username");
-      })
+      });
   };
 
   const registerUser = async (e: FormEvent) => {
@@ -51,15 +51,19 @@ const Login: React.FC = () => {
     if (!validateUserData()) return;
     setErrorMessage(null);
 
-    apiClient.post('/register', {
-      username, password
-    }).then(() => {
-      toast("Registered!");
-      resetUserData();
-      setShowLoginTab(true);
-    }).catch(() => {
-      toast("User already exists");
-    });
+    apiClient
+      .post("/register", {
+        username,
+        password,
+      })
+      .then(() => {
+        toast("Registered!");
+        resetUserData();
+        setShowLoginTab(true);
+      })
+      .catch(() => {
+        toast("User already exists");
+      });
   };
 
   const toggleTab = () => {
@@ -75,10 +79,20 @@ const Login: React.FC = () => {
           <h1>Login</h1>
           {errorMessage !== null && <span>{errorMessage}</span>}
           <div className="input-control">
-            <input type="text" placeholder="username" value={username} onChange={e => setUsername(e.target.value)} />
+            <input
+              type="text"
+              placeholder="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
           </div>
           <div className="input-control">
-            <input type="password" placeholder="password" value={password} onChange={e => setPassword(e.target.value)} />
+            <input
+              type="password"
+              placeholder="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           <button type="submit" className="submit-btn" disabled={loading}>
             Login
@@ -95,10 +109,20 @@ const Login: React.FC = () => {
           <h1>Register</h1>
           {errorMessage !== null && <span>{errorMessage}</span>}
           <div className="input-control">
-            <input type="text" placeholder="username" value={username} onChange={e => setUsername(e.target.value)} />
+            <input
+              type="text"
+              placeholder="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
           </div>
           <div className="input-control">
-            <input type="password" placeholder="password" value={password} onChange={e => setPassword(e.target.value)} />
+            <input
+              type="password"
+              placeholder="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </div>
           <button type="submit" className="submit-btn" disabled={loading}>
             Register

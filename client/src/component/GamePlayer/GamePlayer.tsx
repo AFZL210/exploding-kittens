@@ -5,6 +5,8 @@ import useAuth from "../../hooks/useAuth";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchGameState, openCard } from "../../redux/slices/gameSlice";
 import { RootState } from "../../redux/store";
+import { CardTypes } from "../../types/types";
+import toast from "react-hot-toast";
 
 const GamePlayer: React.FC = () => {
   const { user } = useAuth();
@@ -18,8 +20,22 @@ const GamePlayer: React.FC = () => {
 
   const openCardAsync = (index: number) => {
     // @ts-ignore
-    dispatch(openCard({index: index, username: user.username}));
-  }
+    dispatch(openCard({ index: index, username: user.username }));
+    if (
+      [CardTypes.Shuffle, CardTypes.Bomb].includes(
+        gameState.cards[index].cardType
+      )
+    ) {
+      toast('Resetting cards...');
+      new Promise((res, _rej) => {
+        setTimeout(() => {
+          res(null);
+        }, 5000)
+      }).then(() => {
+        getGameStateDataAsync();
+      })
+    }
+  };
 
   useEffect(() => {
     getGameStateDataAsync();

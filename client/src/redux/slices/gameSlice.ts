@@ -54,7 +54,6 @@ const gameSlice = createSlice({
     builder.addCase(openCard.fulfilled, (state, action) => {
       state.isLoading = false;
       state.cards[action.payload].isFlipped = true;
-      console.log(action.payload);
     });
   },
 });
