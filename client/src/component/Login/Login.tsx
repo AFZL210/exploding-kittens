@@ -3,14 +3,13 @@ import "./Login.css";
 import toast from "react-hot-toast";
 import useAuth from "../../hooks/useAuth";
 import apiClient from "../../lib/apiClient";
-import { AxiosResponse } from "axios";
 
 const Login: React.FC = () => {
   const [showLoginTab, setShowLoginTab] = useState(true);
   const [errorMessage, setErrorMessage] = useState<null | string>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { loading } = useAuth();
+  const { loading, login } = useAuth();
 
   const resetUserData = () => {
     setUsername('');
@@ -34,6 +33,16 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (!validateUserData()) return;
     setErrorMessage(null);
+
+    apiClient.post('/login', { username, password })
+      .then(() => {
+        toast("Logged in!");
+        login(username);
+        resetUserData();
+      })
+      .catch(() => {
+        toast("Wrong password or username");
+      })
   };
 
   const registerUser = async (e: FormEvent) => {
@@ -47,10 +56,9 @@ const Login: React.FC = () => {
       toast("Registered!");
       resetUserData();
       setShowLoginTab(true);
-    })
-      .catch(() => {
-        toast("User already exists");
-      })
+    }).catch(() => {
+      toast("User already exists");
+    });
   };
 
   const toggleTab = () => {

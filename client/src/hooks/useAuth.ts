@@ -16,7 +16,7 @@ const useAuth = () => {
     dispatch(loginUser({ isLoggedIn: true, username: username, loading: true }));
   };
 
-  return { isLoggedIn, login, logout,  loading};
+  return { isLoggedIn, login, logout, loading, user };
 };
 
 export default useAuth;
