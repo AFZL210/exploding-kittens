@@ -16,3 +16,22 @@ export interface UserI {
   username: string;
   loading: boolean;
 }
+
+export interface Card {
+  cardType: string;
+  isFlipped: boolean;
+}
+
+export interface GameStateI {
+  cards: Card[];
+  defuseCards: number;
+  remainingCards: number;
+  gameOver: boolean;
+  isWon: boolean;
+  isLoading: boolean;
+}
+
+export interface LeaderboardEntryI {
+  username: string;
+  score: number;
+}
