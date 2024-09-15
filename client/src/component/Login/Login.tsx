@@ -38,6 +38,7 @@ const Login: React.FC = () => {
       .then(() => {
         toast("Logged in!");
         login(username);
+        localStorage.setItem('username', username);
         resetUserData();
       })
       .catch(() => {

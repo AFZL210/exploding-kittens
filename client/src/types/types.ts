@@ -18,7 +18,7 @@ export interface UserI {
 }
 
 export interface Card {
-  cardType: string;
+  cardType: CardTypes;
   isFlipped: boolean;
 }
 
@@ -28,10 +28,15 @@ export interface GameStateI {
   remainingCards: number;
   gameOver: boolean;
   isWon: boolean;
-  isLoading: boolean;
+  isLoading?: boolean;
 }
 
 export interface LeaderboardEntryI {
   username: string;
   score: number;
+}
+
+export interface openCardI {
+  username: string;
+  index: number;
 }

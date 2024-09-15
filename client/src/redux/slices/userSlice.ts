@@ -1,10 +1,12 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserI } from "../../types/types";
 
+const localUsername = localStorage.getItem("username");
+
 const initialUserState: UserI = {
-  isLoggedIn: false,
-  username: "",
-  loading: false
+  isLoggedIn: localUsername === null ? false : true,
+  username: localUsername ?? "",
+  loading: false,
 };
 
 const userSlice = createSlice({
@@ -16,11 +18,8 @@ const userSlice = createSlice({
       state.username = action.payload.username;
       state.loading = false;
     },
-    logoutUser: (state) => {
-      state = initialUserState;
-    },
   },
 });
 
-export const { loginUser, logoutUser } = userSlice.actions;
+export const { loginUser } = userSlice.actions;
 export default userSlice.reducer;

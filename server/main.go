@@ -183,18 +183,18 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch drawnCard.CardType {
-	case "cat":
+	case "Cat":
 		gameState.RemainingCards--
-	case "defuse":
+	case "Defuse":
 		gameState.DefuseCards++
-	case "exploding_kitten":
+	case "Bomb":
 		if gameState.DefuseCards > 0 {
 			gameState.DefuseCards--
 		} else {
 			response.IsLost = true
 			resetGame(username)
 		}
-	case "shuffle":
+	case "Shuffle":
 		allFlipped := true
 		for _, card := range gameState.Cards {
 			if !card.IsFlipped {
@@ -239,7 +239,7 @@ func resetGame(username string) {
 }
 
 func createNewGameState() GameState {
-	cardTypes := []string{"cat", "defuse", "shuffle", "exploding_kitten", "cat"}
+	cardTypes := []string{"Cat", "Defuse", "Shuffle", "Bomb", "Cat"}
 	cards := make([]Card, len(cardTypes))
 	for i, cardType := range cardTypes {
 		cards[i] = Card{CardType: cardType, IsFlipped: false}
