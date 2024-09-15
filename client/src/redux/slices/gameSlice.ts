@@ -12,7 +12,7 @@ const initialState: GameStateI = {
 }
 
 export const fetchGameState = createAsyncThunk('fetchGameState', async () => {
-  const res = await apiClient.get(`/gamestate?username=a`);
+  const res = await apiClient.get(`/getcards?username=a`);
   return res.data;
 });
 

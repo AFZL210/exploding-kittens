@@ -3,10 +3,12 @@ import "./GamePlayer.css";
 import Card from "../Card/Card";
 import { CardTypes } from "../../types/types";
 import useAuth from "../../hooks/useAuth";
+import { useDispatch } from "react-redux";
+import { fetchGameState } from "../../redux/slices/gameSlice";
 
 const GamePlayer: React.FC = () => {
   const { user } = useAuth();
-
+  const dispatch = useDispatch();
   return (
     <div className="game-player">
       <div className="draw-count-container">
