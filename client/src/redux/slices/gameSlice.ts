@@ -21,7 +21,7 @@ const gameSlice = createSlice({
   initialState: initialState,
   reducers: {
     addItem: (state, action: PayloadAction<GameStateI>) => {
-      state = action.payload;
+      return action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -29,7 +29,7 @@ const gameSlice = createSlice({
       state.isLoading = true;
     })
     builder.addCase(fetchGameState.fulfilled, (state, action: PayloadAction<GameStateI>) => {
-      state = { ...action.payload, isLoading: false };
+      return { ...action.payload, isLoading: false };
     })
   }
 });
