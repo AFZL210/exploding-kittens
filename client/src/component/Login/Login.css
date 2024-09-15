@@ -1,0 +1,46 @@
+.login-container {
+    width: 100vw;
+    height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: black;
+}
+
+.login-container .form-container {
+    width: 380px;
+    height: 300px;
+    position: relative;
+    bottom: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.input-control {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+}
+
+.input-control input {
+    color: black;
+    height: 32px;
+    width: 100%;
+    padding: 0 8px;
+}
+
+.submit-btn {
+    width: 100%;
+    color: black;
+    cursor: pointer;
+    height: 32px;
+}
+
+.toggle-link {
+    cursor: pointer;
+    text-decoration: underline;
+}
