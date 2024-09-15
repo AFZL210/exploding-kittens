@@ -59,111 +59,40 @@ func main() {
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+	json.NewDecoder(r.Body).Decode(&user)
 
-	storedHash, err := redisClient.Get(r.Context(), "user:"+user.Username).Result()
-	if err == redis.Nil {
-		http.Error(w, "User not found", http.StatusUnauthorized)
-		return
-	} else if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(user.Password))
-	if err != nil {
+	storedHash, _ := redisClient.Get(r.Context(), "user:"+user.Username).Result()
+	if bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(user.Password)) == nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
+	} else {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+	json.NewDecoder(r.Body).Decode(&user)
 
-	exists, err := redisClient.Exists(r.Context(), "user:"+user.Username).Result()
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-	if exists == 1 {
+	if exists, _ := redisClient.Exists(r.Context(), "user:"+user.Username).Result(); exists == 0 {
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		redisClient.Set(r.Context(), "user:"+user.Username, string(hashedPassword), 0)
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
+	} else {
 		http.Error(w, "Username already exists", http.StatusConflict)
-		return
 	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = redisClient.Set(r.Context(), "user:"+user.Username, string(hashedPassword), 0).Err()
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
 }
 
 func getCardsHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
-	if username == "" {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
-	}
 
 	gameStateJSON, err := redisClient.Get(r.Context(), "gamestate:"+username).Result()
-	if err == redis.Nil {
-		gameState := createNewGameState()
-		gameStateBytes, err := json.Marshal(gameState)
-		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
-		gameStateJSON = string(gameStateBytes)
-		err = redisClient.Set(r.Context(), "gamestate:"+username, gameStateJSON, 0).Err()
-		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
-	} else if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	var gameState GameState
-	err = json.Unmarshal([]byte(gameStateJSON), &gameState)
 	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	if gameState.GameOver {
-		gameState = createNewGameState()
-		gameStateBytes, err := json.Marshal(gameState)
-		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
+		gameState := createNewGameState()
+		gameStateBytes, _ := json.Marshal(gameState)
 		gameStateJSON = string(gameStateBytes)
-		err = redisClient.Set(r.Context(), "gamestate:"+username, gameStateJSON, 0).Err()
-		if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
+		redisClient.Set(r.Context(), "gamestate:"+username, gameStateJSON, 0)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -171,23 +100,12 @@ func getCardsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
-	users, err := redisClient.Keys(r.Context(), "user:*").Result()
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
+	users, _ := redisClient.Keys(r.Context(), "user:*").Result()
 
 	var leaderboard []LeaderboardEntry
-
 	for _, user := range users {
 		username := user[5:]
-		score, err := redisClient.Get(r.Context(), "score:"+username).Int()
-		if err == redis.Nil {
-			score = 0
-		} else if err != nil {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-			return
-		}
+		score, _ := redisClient.Get(r.Context(), "score:"+username).Int()
 		leaderboard = append(leaderboard, LeaderboardEntry{Username: username, Score: score})
 	}
 
@@ -201,78 +119,30 @@ func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
 
 func shuffleHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
-	if username == "" {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
-	}
-
 	gameState := createNewGameState()
-	gameStateBytes, err := json.Marshal(gameState)
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-	gameStateJSON := string(gameStateBytes)
-	err = redisClient.Set(r.Context(), "gamestate:"+username, gameStateJSON, 0).Err()
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
+	gameStateBytes, _ := json.Marshal(gameState)
+	redisClient.Set(r.Context(), "gamestate:"+username, string(gameStateBytes), 0)
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(gameStateJSON))
+	w.Write(gameStateBytes)
 }
 
 func playHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
-	if username == "" {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
-	}
 
 	var requestBody struct {
 		Index int `json:"index"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+	json.NewDecoder(r.Body).Decode(&requestBody)
 
-	gameStateJSON, err := redisClient.Get(r.Context(), "gamestate:"+username).Result()
-	if err == redis.Nil {
-		http.Error(w, "No active game found", http.StatusNotFound)
-		return
-	} else if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
+	gameStateJSON, _ := redisClient.Get(r.Context(), "gamestate:"+username).Result()
 
 	var gameState GameState
-	err = json.Unmarshal([]byte(gameStateJSON), &gameState)
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	if gameState.GameOver {
-		http.Error(w, "Game is already over", http.StatusBadRequest)
-		return
-	}
-
-	if len(gameState.Cards) == 0 {
-		http.Error(w, "No cards left to draw", http.StatusBadRequest)
-		return
-	}
-
-	if requestBody.Index < 0 || requestBody.Index >= len(gameState.Cards) {
-		http.Error(w, "Invalid card index", http.StatusBadRequest)
-		return
-	}
+	json.Unmarshal([]byte(gameStateJSON), &gameState)
 
 	drawnCard := gameState.Cards[requestBody.Index]
 
 	switch drawnCard {
-	case "cat":
 	case "exploding_kitten":
 		if gameState.DefuseCards > 0 {
 			gameState.DefuseCards--
@@ -280,7 +150,6 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 			gameState.GameOver = true
 			gameState.Won = false
 			resetGame(username)
-			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"message": "Game over! You lost."})
 			return
 		}
@@ -296,17 +165,8 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 		incrementScore(username)
 	}
 
-	updatedGameStateJSON, err := json.Marshal(gameState)
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	err = redisClient.Set(r.Context(), "gamestate:"+username, string(updatedGameStateJSON), 0).Err()
-	if err != nil {
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
+	updatedGameStateJSON, _ := json.Marshal(gameState)
+	redisClient.Set(r.Context(), "gamestate:"+username, string(updatedGameStateJSON), 0)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(updatedGameStateJSON)
@@ -337,6 +197,6 @@ func shuffleSlice(slice []string) {
 	}
 }
 
-func incrementScore(username string) error {
-	return redisClient.Incr(context.Background(), "score:"+username).Err()
+func incrementScore(username string) {
+	redisClient.Incr(context.Background(), "score:"+username)
 }
