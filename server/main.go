@@ -155,9 +155,22 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	case "defuse":
 		gameState.DefuseCards++
+		gameState.RemainingCards--
 	case "shuffle":
-		gameState = createNewGameState()
+		if len(gameState.Cards) == 1 {
+			gameState.GameOver = true
+			gameState.Won = true
+			incrementScore(username)
+			json.NewEncoder(w).Encode(map[string]string{"message": "Congratulations! You won the game by drawing the last shuffle card."})
+			return
+		} else {
+			gameState = createNewGameState()
+		}
+	case "cat":
+		gameState.RemainingCards--
 	}
+
+	gameState.Cards = append(gameState.Cards[:requestBody.Index], gameState.Cards[requestBody.Index+1:]...)
 
 	if len(gameState.Cards) == 0 && !gameState.GameOver {
 		gameState.GameOver = true
