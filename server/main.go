@@ -140,6 +140,16 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 	var gameState GameState
 	json.Unmarshal([]byte(gameStateJSON), &gameState)
 
+	if gameState.GameOver {
+		http.Error(w, "Game is already over", http.StatusBadRequest)
+		return
+	}
+
+	if len(gameState.Cards) == 0 {
+		http.Error(w, "No cards left to draw", http.StatusBadRequest)
+		return
+	}
+
 	drawnCard := gameState.Cards[requestBody.Index]
 
 	switch drawnCard {
@@ -163,19 +173,17 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 			incrementScore(username)
 			json.NewEncoder(w).Encode(map[string]string{"message": "Congratulations! You won the game by drawing the last shuffle card."})
 			return
-		} else {
-			gameState = createNewGameState()
 		}
 	case "cat":
 		gameState.RemainingCards--
 	}
 
-	gameState.Cards = append(gameState.Cards[:requestBody.Index], gameState.Cards[requestBody.Index+1:]...)
-
-	if len(gameState.Cards) == 0 && !gameState.GameOver {
+	if len(gameState.Cards) == 1 && gameState.Cards[0] == "shuffle" {
 		gameState.GameOver = true
 		gameState.Won = true
 		incrementScore(username)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Congratulations! You won the game by drawing the last shuffle card."})
+		return
 	}
 
 	updatedGameStateJSON, _ := json.Marshal(gameState)
