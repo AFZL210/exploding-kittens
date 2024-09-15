@@ -1,23 +1,11 @@
-import React, { useEffect } from "react";
+import React from "react";
 import "./GamePlayer.css";
 import Card from "../Card/Card";
 import { CardTypes } from "../../types/types";
 import useAuth from "../../hooks/useAuth";
-import { useDispatch } from "react-redux";
-import { fetchGameState } from "../../redux/slices/gameSlice";
 
 const GamePlayer: React.FC = () => {
   const { user } = useAuth();
-  const dispatch = useDispatch();
-  
-  const getGameState = async () => {
-    dispatch(fetchGameState())
-    console.log("hello")
-  }
-
-  useEffect(() => {
-    getGameState();
-  }, [])
 
   return (
     <div className="game-player">
@@ -29,7 +17,7 @@ const GamePlayer: React.FC = () => {
       </div>
 
       <div className="cards-container">
-        <button onClick={() => getGameState()}>click</button>
+        <button>click</button>
         <Card cardType={CardTypes.Cat} isFlipped={true} index={0} />
         <Card cardType={CardTypes.Bomb} isFlipped={true} index={0} />
         <Card cardType={CardTypes.Defuse} isFlipped={true} index={0} />
