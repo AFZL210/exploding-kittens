@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/handlers"
@@ -127,12 +128,22 @@ func getCardsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
-	users, _ := redisClient.Keys(r.Context(), "user:*").Result()
+	users, err := redisClient.Keys(r.Context(), "user:*").Result()
+	if err != nil || len(users) == 0 {
+		http.Error(w, "No users found", http.StatusNotFound)
+		return
+	}
 
 	var leaderboard []LeaderboardEntry
 	for _, user := range users {
 		username := user[5:]
-		score, _ := redisClient.Get(r.Context(), "score:"+username).Int()
+
+		scoreStr, err := redisClient.Get(r.Context(), "score:"+username).Result()
+		if err == redis.Nil {
+			continue
+		}
+		score, _ := strconv.Atoi(scoreStr)
+
 		leaderboard = append(leaderboard, LeaderboardEntry{Username: username, Score: score})
 	}
 
