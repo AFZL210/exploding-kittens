@@ -44,7 +44,7 @@ var redisClient *redis.Client
 
 func main() {
 	redisClient = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "rediss://default:AVNS_jVtEm0xoUKh04kmumfk@caching-2daea98a-ak341668-1ede.c.aivencloud.com:17537",
 	})
 
 	router := mux.NewRouter()
