@@ -55,6 +55,7 @@ func main() {
 	router.HandleFunc("/api/leaderboard", leaderboardHandler).Methods("GET")
 	router.HandleFunc("/api/shuffle", shuffleHandler).Methods("GET")
 	router.HandleFunc("/api/play", playHandler).Methods("POST")
+	router.HandleFunc("/api/user-rank", userRankHandler).Methods("GET")
 
 	corsAllowedOrigins := handlers.AllowedOrigins([]string{"*"})
 	corsAllowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
@@ -64,7 +65,6 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("Server starting on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(corsAllowedOrigins, corsAllowedMethods, corsAllowedHeaders)(router)))
 }
 
@@ -128,11 +128,7 @@ func getCardsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
-	users, err := redisClient.Keys(r.Context(), "user:*").Result()
-	if err != nil || len(users) == 0 {
-		http.Error(w, "No users found", http.StatusNotFound)
-		return
-	}
+	users, _ := redisClient.Keys(r.Context(), "user:*").Result()
 
 	var leaderboard []LeaderboardEntry
 	for _, user := range users {
@@ -153,6 +149,40 @@ func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(leaderboard)
+}
+
+func userRankHandler(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("username")
+	users, _ := redisClient.Keys(r.Context(), "user:*").Result()
+
+	var leaderboard []LeaderboardEntry
+	for _, user := range users {
+		userKey := user[5:]
+		scoreStr, err := redisClient.Get(r.Context(), "score:"+userKey).Result()
+		if err == redis.Nil {
+			continue
+		}
+		score, _ := strconv.Atoi(scoreStr)
+		leaderboard = append(leaderboard, LeaderboardEntry{Username: userKey, Score: score})
+	}
+
+	sort.Slice(leaderboard, func(i, j int) bool {
+		return leaderboard[i].Score > leaderboard[j].Score
+	})
+
+	for rank, entry := range leaderboard {
+		if entry.Username == username {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"username": username,
+				"rank":     rank + 1,
+				"score":    entry.Score,
+			})
+			return
+		}
+	}
+
+	http.Error(w, "User not found", http.StatusNotFound)
 }
 
 func shuffleHandler(w http.ResponseWriter, r *http.Request) {

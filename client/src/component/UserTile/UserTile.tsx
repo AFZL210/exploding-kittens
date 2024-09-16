@@ -1,27 +1,48 @@
-import React from 'react'
-import './UserTile.css';
+import React, { useEffect, useState } from "react";
+import "./UserTile.css";
+import apiClient from "../../lib/apiClient";
 
-const UserTile: React.FC = () => {
-  return (
-    <div className='user-tile'>
-        <div className='rank-heading tile'>
-            <h4>Username</h4>
-            <h4>Rank</h4>
-        </div>
-        <div className='user-rank tile'>
-            <h4>Username</h4>
-            <h4>Rank</h4>
-        </div>
-        <div className='user-rank tile'>
-            <h4>Username</h4>
-            <h4>Rank</h4>
-        </div>
-        <div className='user-rank tile'>
-            <h4>Username</h4>
-            <h4>Rank</h4>
-        </div>
-    </div>
-  )
+interface UserRankI {
+  username: string;
+  score: number;
 }
 
-export default UserTile
+const UserTile: React.FC = () => {
+  const [leaderboard, setLeaderboard] = useState<UserRankI[]>();
+  const [loading, setLoading] = useState(true);
+
+  const getLeaderBoardAsync = async () => {
+    apiClient.get("/leaderboard").then((data) => {
+      console.log(data.data);
+      setLeaderboard(data.data);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    getLeaderBoardAsync();
+  }, []);
+
+  return (
+    <div className="user-tile">
+      <div className="rank-heading tile">
+        <h4>Username</h4>
+        <h4>Rank</h4>
+      </div>
+      {loading ? (
+        <span>Loading...</span>
+      ) : (
+        leaderboard?.map((userRank: UserRankI, idx: number) => {
+          return (
+            <div className="user-rank tile" key={idx}>
+              <h4>{userRank.username}</h4>
+              <h4>{userRank.score}</h4>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+};
+
+export default UserTile;
