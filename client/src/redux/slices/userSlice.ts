@@ -1,11 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserI } from "../../types/types";
 
-const localUsername = localStorage.getItem("username");
-
 const initialUserState: UserI = {
-  isLoggedIn: localUsername === null ? false : true,
-  username: localUsername ?? "",
+  isLoggedIn: false,
+  username: "",
   loading: false,
 };
 
