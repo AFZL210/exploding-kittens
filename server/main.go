@@ -30,8 +30,8 @@ type GameState struct {
 	Cards          []Card `json:"cards"`
 	DefuseCards    int    `json:"defuseCards"`
 	RemainingCards int    `json:"remainingCards"`
-	GameOver       bool   `json:"gameOver"`
 	IsWon          bool   `json:"isWon"`
+	IsLost         bool   `json:"isLost"`
 }
 
 type LeaderboardEntry struct {
@@ -105,8 +105,25 @@ func getCardsHandler(w http.ResponseWriter, r *http.Request) {
 		redisClient.Set(r.Context(), "gamestate:"+username, gameStateJSON, 0)
 	}
 
+	var gameState GameState
+	json.Unmarshal([]byte(gameStateJSON), &gameState)
+
+	response := struct {
+		Cards          []Card `json:"cards"`
+		IsWon          bool   `json:"isWon"`
+		IsLost         bool   `json:"isLost"`
+		DefuseCount    int    `json:"defuseCount"`
+		RemainingCards int    `json:"remainingCards"`
+	}{
+		Cards:          gameState.Cards,
+		IsWon:          gameState.IsWon,
+		IsLost:         gameState.IsLost,
+		DefuseCount:    gameState.DefuseCards,
+		RemainingCards: gameState.RemainingCards,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(gameStateJSON))
+	json.NewEncoder(w).Encode(response)
 }
 
 func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
@@ -133,8 +150,22 @@ func shuffleHandler(w http.ResponseWriter, r *http.Request) {
 	gameStateBytes, _ := json.Marshal(gameState)
 	redisClient.Set(r.Context(), "gamestate:"+username, string(gameStateBytes), 0)
 
+	response := struct {
+		Cards          []Card `json:"cards"`
+		IsWon          bool   `json:"isWon"`
+		IsLost         bool   `json:"isLost"`
+		DefuseCount    int    `json:"defuseCount"`
+		RemainingCards int    `json:"remainingCards"`
+	}{
+		Cards:          gameState.Cards,
+		IsWon:          gameState.IsWon,
+		IsLost:         gameState.IsLost,
+		DefuseCount:    gameState.DefuseCards,
+		RemainingCards: gameState.RemainingCards,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(gameStateBytes)
+	json.NewEncoder(w).Encode(response)
 }
 
 func playHandler(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +181,7 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 	var gameState GameState
 	json.Unmarshal([]byte(gameStateJSON), &gameState)
 
-	if gameState.GameOver {
+	if gameState.IsWon || gameState.IsLost {
 		http.Error(w, "Game is already over", http.StatusBadRequest)
 		return
 	}
@@ -168,6 +199,31 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 	gameState.Cards[requestBody.Index].IsFlipped = true
 	drawnCard := gameState.Cards[requestBody.Index]
 
+	switch drawnCard.CardType {
+	case "Cat":
+		gameState.RemainingCards--
+	case "Defuse":
+		gameState.DefuseCards++
+		gameState.RemainingCards--
+	case "Shuffle":
+		if gameState.RemainingCards == 1 {
+			gameState.IsWon = true
+		} else {
+			gameState.IsLost = true
+		}
+	case "Bomb":
+		if gameState.DefuseCards > 0 {
+			gameState.DefuseCards--
+			gameState.RemainingCards--
+		} else {
+			gameState.IsLost = true
+		}
+	}
+
+	if !gameState.IsWon && !gameState.IsLost && gameState.RemainingCards == 0 {
+		gameState.IsWon = true
+	}
+
 	response := struct {
 		Cards          []Card `json:"cards"`
 		IsWon          bool   `json:"isWon"`
@@ -176,60 +232,25 @@ func playHandler(w http.ResponseWriter, r *http.Request) {
 		RemainingCards int    `json:"remainingCards"`
 	}{
 		Cards:          gameState.Cards,
-		IsWon:          false,
-		IsLost:         false,
+		IsWon:          gameState.IsWon,
+		IsLost:         gameState.IsLost,
 		DefuseCount:    gameState.DefuseCards,
 		RemainingCards: gameState.RemainingCards,
 	}
 
-	switch drawnCard.CardType {
-	case "Cat":
-		gameState.RemainingCards--
-	case "Defuse":
-		gameState.DefuseCards++
-	case "Bomb":
-		if gameState.DefuseCards > 0 {
-			gameState.DefuseCards--
-		} else {
-			response.IsLost = true
-			resetGame(username)
-		}
-	case "Shuffle":
-		allFlipped := true
-		for _, card := range gameState.Cards {
-			if !card.IsFlipped {
-				allFlipped = false
-				break
-			}
-		}
-		if allFlipped {
-			response.IsWon = true
-			incrementScore(username)
-		} else {
-			response.IsLost = true
-			resetGame(username)
-		}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+	if gameState.IsWon {
+		incrementScore(username)
 	}
 
-	if !response.IsWon && !response.IsLost {
-		gameState.RemainingCards--
-		if gameState.RemainingCards == 0 {
-			response.IsWon = true
-			resetGame(username)
-			incrementScore(username)
-		}
-	}
-
-	response.DefuseCount = gameState.DefuseCards
-	response.RemainingCards = gameState.RemainingCards
-
-	if !response.IsWon && !response.IsLost {
+	if gameState.IsWon || gameState.IsLost {
+		resetGame(username)
+	} else {
 		updatedGameStateJSON, _ := json.Marshal(gameState)
 		redisClient.Set(r.Context(), "gamestate:"+username, string(updatedGameStateJSON), 0)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
 
 func resetGame(username string) {
@@ -249,8 +270,8 @@ func createNewGameState() GameState {
 		Cards:          cards,
 		DefuseCards:    0,
 		RemainingCards: len(cards),
-		GameOver:       false,
 		IsWon:          false,
+		IsLost:         false,
 	}
 }
 

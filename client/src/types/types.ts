@@ -26,7 +26,7 @@ export interface GameStateI {
   cards: Card[];
   defuseCards: number;
   remainingCards: number;
-  gameOver: boolean;
+  isLost: boolean;
   isWon: boolean;
   isLoading?: boolean;
 }

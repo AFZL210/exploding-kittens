@@ -5,7 +5,7 @@ import apiClient from "../../lib/apiClient";
 const initialState: GameStateI = {
   cards: [],
   defuseCards: 0,
-  gameOver: false,
+  isLost: false,
   isWon: false,
   isLoading: true,
   remainingCards: 0,
@@ -22,10 +22,10 @@ export const fetchGameState = createAsyncThunk(
 export const openCard = createAsyncThunk(
   "openCard",
   async (payload: openCardI) => {
-    await apiClient.post(`/play?username=${payload.username}`, {
+    const res = await apiClient.post(`/play?username=${payload.username}`, {
       index: payload.index,
     });
-    return payload.index;
+    return res.data;
   }
 );
 
@@ -51,9 +51,12 @@ const gameSlice = createSlice({
     builder.addCase(openCard.pending, (state) => {
       state.isLoading = true;
     });
-    builder.addCase(openCard.fulfilled, (state, action) => {
+    builder.addCase(openCard.fulfilled, (state, action: PayloadAction<GameStateI>) => {
       state.isLoading = false;
-      state.cards[action.payload].isFlipped = true;
+      state.isLost = action.payload.isLost;
+      state.isWon = action.payload.isWon;
+      state.remainingCards = action.payload.remainingCards;
+      state.cards = action.payload.cards;
     });
   },
 });
