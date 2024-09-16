@@ -12,8 +12,10 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -66,10 +68,10 @@ func main() {
 
 	router.HandleFunc("/api/login", loginHandler).Methods("POST")
 	router.HandleFunc("/api/register", registerHandler).Methods("POST")
-	router.HandleFunc("/api/getcards", getCardsHandler).Methods("GET")
+	router.Handle("/api/getcards", jwtMiddleware(http.HandlerFunc(getCardsHandler))).Methods("GET")
+	router.Handle("/api/shuffle", jwtMiddleware(http.HandlerFunc(shuffleHandler))).Methods("GET")
+	router.Handle("/api/play", jwtMiddleware(http.HandlerFunc(playHandler))).Methods("POST")
 	router.HandleFunc("/api/leaderboard", leaderboardHandler).Methods("GET")
-	router.HandleFunc("/api/shuffle", shuffleHandler).Methods("GET")
-	router.HandleFunc("/api/play", playHandler).Methods("POST")
 	router.HandleFunc("/api/user-rank", userRankHandler).Methods("GET")
 
 	corsAllowedOrigins := handlers.AllowedOrigins([]string{"*"})
@@ -81,6 +83,54 @@ func main() {
 		port = "8080"
 	}
 	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(corsAllowedOrigins, corsAllowedMethods, corsAllowedHeaders)(router)))
+}
+
+var jwtSecret = []byte("your-secret-key")
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+func generateJWT(username string) (string, error) {
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+func jwtMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var tokenStr string
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "" && len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			tokenStr = authHeader[7:]
+		} else {
+			cookie, err := r.Cookie("token")
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			tokenStr = cookie.Value
+		}
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtSecret, nil
+		})
+		if err != nil || !token.Valid {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), "username", claims.Username)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -101,8 +151,19 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(user.Password)); err == nil {
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"username": user.Username,
+			"exp":      time.Now().Add(time.Hour * 24).Unix(),
+		})
+
+		tokenString, err := token.SignedString(jwtSecret)
+		if err != nil {
+			http.Error(w, "Server error", http.StatusInternalServerError)
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
+		json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 	} else {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 	}

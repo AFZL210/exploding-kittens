@@ -3,6 +3,7 @@ import "./Login.css";
 import toast from "react-hot-toast";
 import useAuth from "../../hooks/useAuth";
 import apiClient from "../../lib/apiClient";
+import Cookies from "js-cookie";
 
 const Login: React.FC = () => {
   const [showLoginTab, setShowLoginTab] = useState(true);
@@ -35,11 +36,18 @@ const Login: React.FC = () => {
 
     apiClient
       .post("/login", { username, password })
-      .then(() => {
-        toast("Logged in!");
-        login(username);
-        localStorage.setItem("username", username);
-        resetUserData();
+      .then((response) => {
+        const { token } = response.data;
+
+        if (token) {
+          Cookies.set("token", token, { expires: 1 });
+          toast("Logged in!");
+          login(username);
+          localStorage.setItem("username", username);
+          resetUserData();
+        } else {
+          toast("Failed to retrieve token");
+        }
       })
       .catch(() => {
         toast("Wrong password or username");

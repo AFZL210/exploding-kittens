@@ -12,8 +12,8 @@ const useAuth = () => {
     dispatch(
       loginUser({ isLoggedIn: true, username: username, loading: true })
     );
+    localStorage.setItem("username", username);
   };
-
   return { isLoggedIn, login, loading, user };
 };
 
