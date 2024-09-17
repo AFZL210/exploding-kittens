@@ -41,7 +41,7 @@ const UserTile: React.FC = () => {
           return (
             <div className="user-rank tile" key={idx}>
               <h4>{userRank.username}</h4>
-              <h4>{userRank.score}</h4>
+              <h4>{idx+1}</h4>
             </div>
           );
         })
