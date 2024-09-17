@@ -8,12 +8,11 @@ interface UserRankI {
 }
 
 const UserTile: React.FC = () => {
-  const [leaderboard, setLeaderboard] = useState<UserRankI[]>();
+  const [leaderboard, setLeaderboard] = useState<UserRankI[]>([]);
   const [loading, setLoading] = useState(true);
 
   const getLeaderBoardAsync = async () => {
     apiClient.get("/leaderboard").then((data) => {
-      console.log(data.data);
       setLeaderboard(data.data);
       setLoading(false);
     });
@@ -21,6 +20,12 @@ const UserTile: React.FC = () => {
 
   useEffect(() => {
     getLeaderBoardAsync();
+
+    const interval = setInterval(() => {
+      getLeaderBoardAsync();
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -32,7 +37,7 @@ const UserTile: React.FC = () => {
       {loading ? (
         <span>Loading...</span>
       ) : (
-        leaderboard?.map((userRank: UserRankI, idx: number) => {
+        leaderboard.map((userRank: UserRankI, idx: number) => {
           return (
             <div className="user-rank tile" key={idx}>
               <h4>{userRank.username}</h4>
