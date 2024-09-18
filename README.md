@@ -142,7 +142,6 @@ No go to ```http://localhost:5173/``` to play the game!
 
 - User game create an account and play game as per given rules
 - Show leaderboard to users
-- Pagination
 - Used Redux for state management
 - User can login/register with username and password
 - Used JWT for auth
