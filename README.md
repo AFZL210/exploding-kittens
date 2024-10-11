@@ -8,8 +8,6 @@ A luck based card game.
 [![Watch the video](https://img.youtube.com/vi/iBNB24ZarnM/0.jpg)](https://youtu.be/iBNB24ZarnM)
 
 
-
-
 ## Installation
 
 ### Clone the Project
